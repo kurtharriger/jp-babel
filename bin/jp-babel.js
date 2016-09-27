@@ -64,6 +64,7 @@ var usage = (
     "    --jp-working-dir=path  set Babel working directory\n" +
     "                           (default = current working directory)\n" +
     "    --version              show Babel version\n" +
+    "    --jp-server=server     nel server address\n" +
     "\n" +
     "and any other options recognised by the Jupyter notebook; run:\n" +
     "\n" +
@@ -146,7 +147,7 @@ function parseCommandArgs(context) {
         context.path.kernel,
     ];
     context.args.frontend = [
-        "ipython",
+        "jupyter",
         "notebook",
     ];
 
@@ -158,6 +159,7 @@ function parseCommandArgs(context) {
         var FLAG_JP_INSTALL_KERNEL = "--jp-install-kernel";
         var FLAG_JP_PROTOCOL = "--jp-protocol=";
         var FLAG_JP_WORKING_DIR = "--jp-working-dir=";
+        var FLAG_JP_SERVER = "--jp-server=";
 
         if (e === FLAG_JP_DEBUG) {
             context.flag.debug = DEBUG = true;
@@ -194,6 +196,9 @@ function parseCommandArgs(context) {
             context.flag.cwd = fs.realpathSync(
                 e.slice(FLAG_JP_WORKING_DIR.length)
             );
+        } else if (e.lastIndexOf(FLAG_JP_SERVER, 0) === 0) {
+            var server = e.slice(FLAG_JP_SERVER.length);
+            context.args.kernel.push("--server=" + server);
 
         } else if (e.lastIndexOf("--jp-", 0) === 0) {
             console.error(util.format("Error: Unknown flag '%s'\n", e));
@@ -316,6 +321,7 @@ function installKernelAsync(context, callback) {
             if (context.flag.install !== "global") {
                 cmd += "  --user";
             }
+
             exec(cmd, function(error, stdout, stderr) {
 
                 // Remove temporary spec folder
@@ -344,9 +350,16 @@ function installKernelAsync(context, callback) {
 function spawnFrontend(context) {
     var cmd = context.args.frontend[0];
     var args = context.args.frontend.slice(1);
-    var frontend = spawn(cmd, args, {
-        stdio: "inherit"
-    });
+
+    // TODO: for some unknown reason Kernel now fails
+    // to start when stdio: inherit.
+    // if output is needed however you can just
+    // run jupyter notebook directly on commandline
+    // var frontend = spawn(cmd, args, {
+    //     stdio: "inherit"
+    // });
+
+    var frontend = spawn(cmd, args);
 
     // Relay SIGINT onto the frontend
     var signal = "SIGINT";
